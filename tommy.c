@@ -908,6 +908,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	TRIPLICATE_SIZE_T(matC_bak->size1, mcs10, mcs11, mcs12);
 	TRIPLICATE_SIZE_T(matC_bak->size2, mcs20, mcs21, mcs22);
 	int jmpret, isEqual;
+	DBG(printf("[DGEMM_FT3] Begin to encode\n"));
 	encode((matB->data), (matB->size1*matB->size2), &ecMatB);
 	TRIPLICATE(ecMatB, emb_0, emb_1, emb_2);
 	int emc_size = encode((matC_bak->data), (matC->size1*matC->size2), &ecMatC);
