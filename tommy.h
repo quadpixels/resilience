@@ -1,4 +1,5 @@
-// For branch "master"
+// Merged; the additions should work with both branch 20120817 and master of GSL
+// code.
 
 #pragma once
 #ifndef TOMMY_H
