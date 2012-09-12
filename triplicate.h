@@ -4,7 +4,6 @@
 #include <gsl/gsl_matrix.h>
 
 #define noinline __attribute__((noinline))
-noinline void trick_me_jr(int);
 noinline unsigned long trick_me_ptr(unsigned long, int);
 noinline size_t trick_me_size_t(size_t, size_t);
 noinline void trick_blackhole(size_t);
