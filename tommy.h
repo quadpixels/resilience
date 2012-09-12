@@ -77,7 +77,6 @@ void my_action(int sig);
 	if(jmpret == 0) { \
 		memcpy(&buf_1, &buf, sizeof(jmp_buf)); \
 		memcpy(&buf_2, &buf, sizeof(jmp_buf)); \
-		printf("[SUPERSETJMP] %s (sum=%d)\n", message, GetJmpBufChecksum(&buf)); \
 	} else { \
 		printf("[SUPERSETJMP] returned from %s (sum=%d)\n", message, GetJmpBufChecksum(&buf)); \
 	}\

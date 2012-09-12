@@ -11,6 +11,11 @@ jmp_buf buf, buf_1, buf_2;
 int _count = 0;
 int _countmax = 20;
 int num_total_retries = 0;
+int num_retries_mm = 0;
+int num_retries_mv = 0;
+int num_retries_rk = 0;
+int num_retries_sv = 0;
+int num_retries_cd = 0;
 
 noinline void trick_me_jr(int jmpret) {
 	if(jmpret == 999) printf("Jack is in the box!\n");
@@ -110,6 +115,11 @@ void do_backtrace() {
 
 void MY_SIGSEGV_HANDLER_SUMMARY() {
 	printf("[MySigsegvHandler] # of faults handled: %d\n", _count);
+	printf("[FT3] # of retries - MM: %d\n", num_retries_mm);
+	printf("[FT3] # of retries - MV: %d\n", num_retries_mv);
+	printf("[FT3] # of retries - RK: %d\n", num_retries_rk);
+	printf("[FT3] # of retries - SV: %d\n", num_retries_sv);
+	printf("[FT3] # of retries - Cholesky Decomp: %d\n", num_retries_cd);
 }
 
 #ifdef __cplusplus

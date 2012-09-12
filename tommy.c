@@ -41,7 +41,8 @@
 
 int nonEqualCount = 0;
 // int num_total_retries = 0; // Moved to tommy_handler.c
-extern int num_total_retries;
+extern int num_total_retries, num_retries_mm, num_retries_mv, num_retries_rk,
+           num_retries_sv, num_retries_cd;
 double is_equal_knob = FT_TOLERANCE;
 void check_nan(double x, char* k) { if(/*isnan(x)*/x!=x) { printf("%s is nan\n", k); }}
 
@@ -996,6 +997,7 @@ chk_rec_c:
 		printf("[DGEMM_FT3]Result: NOT Equal\n");
 		nonEqualCount = nonEqualCount + 1;
 		num_total_retries += 1;
+		num_retries_mm += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			printf("[DGEMM_FT3]Restart calculation.\n");
 			if((nonEqualCount & 4)==4) AdjustIsEqualKnob(1);
@@ -1171,6 +1173,8 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 		my_stopwatch_checkpoint(6); 
 		DBG(printf("[DGEMV_FT3]Result: NOT Equal\n"));
 		nonEqualCount = nonEqualCount + 1;
+		num_total_retries += 1;
+		num_retries_mv += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[DGEMV_FT3]Restart calculation.\n"));
 			if((nonEqualCount % 4)==4) AdjustIsEqualKnob(1);
@@ -1282,6 +1286,8 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		my_stopwatch_checkpoint(6); 
 		DBG(printf("[DSYRK_FT3]Result: NOT Equal\n"));
 		nonEqualCount = nonEqualCount + 1;
+		num_total_retries += 1;
+		num_retries_rk += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[DSYRK_FT3]Restart calculation.\n"));
 			if((nonEqualCount % 4) == 0) AdjustIsEqualKnob(1);
@@ -1404,6 +1410,8 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 	else {
 		my_stopwatch_checkpoint(6); 
 		DBG(printf("[DTRSV_FT]Result: NOT Equal\n"));
+		num_total_retries += 1;
+		num_retries_sv += 1;
 		nonEqualCount = nonEqualCount + 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[DTRSV_FT]Restart calculation.\n"));
@@ -1526,6 +1534,8 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 		my_stopwatch_checkpoint(6); 
 		DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Result: NOT Equal\n")); 
 		nonEqualCount = nonEqualCount+1; 
+		num_total_retries += 1;
+		num_retries_cd += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Restart calculation.\n"));
 			if((nonEqualCount & 4)==4) AdjustIsEqualKnob(1);
