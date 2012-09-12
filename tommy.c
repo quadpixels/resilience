@@ -962,15 +962,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 			TRI_RECOVER(emc_0, emc_1, emc_2);
 			if((long)ecMatC != emc_0) ecMatC = (void*)emc_0;
 			int n_retry = 0;
-chk_rec_c:
-			;  // <---------- Used to fix the bug with llvm-gcc. Compiling with llvm-g++ won't have this bug.
 			float fr = MY_MAT_CHK_RECOVER_POECC(sumC, ecMatC, (gsl_matrix*)matC_0);
-			if(fr > 0.5 && n_retry < 5) {
-				DBG(printf("[DGEMM_FT3] Oh! Is ecMatC damaged? (%d/%d)\n", n_retry, 5));
-				memcpy(ecMatC, ecMatC_2, sizeof(double) * emc_size);
-				n_retry++;
-				goto chk_rec_c;
-			}
 
 			//And there we have completed recovering it....
 			DBG(printf("[DGEMM_FT3]Copying back input...\n"));
@@ -1000,7 +992,7 @@ chk_rec_c:
 		num_retries_mm += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			printf("[DGEMM_FT3]Restart calculation.\n");
-			if((nonEqualCount & 4)==4) AdjustIsEqualKnob(1);
+			if((nonEqualCount & 2)==2) AdjustIsEqualKnob(1);
 			goto kk;
 		}
 	}
