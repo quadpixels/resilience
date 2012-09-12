@@ -699,9 +699,10 @@ FTV_REAL_TRY(0) {
 	for(i=0; i<n; i++) {
 		for(j=0; j<=i; j++) {
 			double tmp = 0;
-			double tmp0 = gsl_matrix_get(A, i, j);
+			double tmp0 = A->data[i*A->tda+j];
 			for(k=0; k<=j; k++) {
-				tmp = tmp + gsl_matrix_get(A_out, i, k)*gsl_matrix_get(A_out, j, k);
+				tmp = tmp + A_out->data[i*A_out->tda + k] *
+				            A_out->data[j*A_out->tda + k];
 			}
 			if(tmp == tmp0) continue;
 			else {
