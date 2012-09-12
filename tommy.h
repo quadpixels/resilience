@@ -1,5 +1,6 @@
 // Merged; the additions should work with both branch 20120817 and master of GSL
 // code.
+// Hello: Update from QB4
 
 #pragma once
 #ifndef TOMMY_H
