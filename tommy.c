@@ -122,17 +122,17 @@ int my_dgemm_actual(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB, double a
 		double temp, elemA, elemB;
 		for(i=0; i<m; i++) {
 			for(j=0; j<p; j++) {
-				temp=gsl_matrix_get(C, i, j) * beta;
+				temp=C->data[C->tda*i+j] * beta;
 				for(k=0; k<n; k++) {
-					if(TransA == CblasNoTrans) elemA=gsl_matrix_get(A, i, k);
-					else if(TransA==CblasTrans)elemA=gsl_matrix_get(A, k, i);
-					if(TransB == CblasNoTrans) elemB=gsl_matrix_get(B, k, j);
-					else if(TransB==CblasTrans)elemB=gsl_matrix_get(B, j, k);
+					if(TransA == CblasNoTrans) elemA=A->data[A->tda*i+k];
+					else if(TransA==CblasTrans)elemA=A->data[A->tda*k+i];
+					if(TransB == CblasNoTrans) elemB=B->data[B->tda*k+j];
+					else if(TransB==CblasTrans)elemB=B->data[B->tda*j+k];
 	FTV_REAL_TRY(1) {
 					temp=temp + elemA*elemB*alpha;
 	} FTV_REAL_CATCH(1) {} FTV_REAL_END(1);
 				}
-				gsl_matrix_set(C, i, j, temp);
+				C->data[C->tda*i+j] = temp;
 			}
 		}
 		return 0;
