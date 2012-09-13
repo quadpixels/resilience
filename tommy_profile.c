@@ -1,5 +1,7 @@
 #include "tommy.h"
 #include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #define STOPWATCH_INCREMENT(id) \
 	if(g_ptv[id]==NULL) g_ptv[id]=&g_tvTick[id]; \
@@ -78,7 +80,7 @@ noinline unsigned long my_stopwatch_get(int id) {
 
 noinline void my_stopwatch_show(int id, char* extra_msg, char writeToFile) {
 	char k[100];
-	sprintf(k, "[my_stopwatch_show #%d] %lu microseconds (%s|%s).\n", id, my_stopwatch_get(id), _swMessage[id], extra_msg);
+	sprintf(k, "[PID=%u][my_stopwatch_show #%d] %lu microseconds (%s|%s).\n", (unsigned int)getpid(), id, my_stopwatch_get(id), _swMessage[id], extra_msg);
 	printf("%s", k);
 	if(writeToFile==1) {
 		FILE* f = fopen("My_Stopwatch_Log", "a");
