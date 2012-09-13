@@ -15,7 +15,7 @@ extern "C" {
 #define BLKSIZE (BLK_LEN*BLK_LEN)
 
 /* How many times do we correct the ECC code itself? */
-#define ECCECC 1
+#define ECCECC 0
 
 /* How many doubles are reserved for storing the size */
 // offset to colsums and rowsums

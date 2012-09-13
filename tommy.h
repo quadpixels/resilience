@@ -41,7 +41,7 @@ extern jmp_buf buf_2;
 /* To enable/disable verbose output */
 
 
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG    
 #define DBG(call) { call; }
 #else   
@@ -196,7 +196,7 @@ double my_sum_matrix(const gsl_matrix*);
 #ifdef DTRSV_EXPERIMENT
 #define FT_TOLERANCE 0.01
 #else
-#define FT_TOLERANCE       0.0001
+#define FT_TOLERANCE       0.00004
 #endif
 /*
 #define FT_TOLERANCE_LOWER 0.999999999999
