@@ -49,8 +49,8 @@
 #endif
 #endif
 
-long poecc_num_encoded = 0;
-long poecc_num_corrected = 0;
+volatile long poecc_num_encoded = 0;
+volatile long poecc_num_corrected = 0;
 
 /* The doctor is examining the patient. If patient's diseases get discovered, cure them. */
 /* It's possible to speculate the range of the size of the patient from the size of the 
