@@ -695,6 +695,7 @@ int Is_GSL_linalg_cholesky_decomp_Equal_actual(const gsl_matrix* A, const gsl_ma
 //	gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1.0, L, L, 0.0, LU);  // Confirmed. Executing this on my laptop with an OPTIMIZED gsl library reduces overhead.
 								       // 20x faster than unoptimized -- but still not fast enough.
 	int ret = 1;
+	my_stopwatch_checkpoint(4);
 FTV_REAL_TRY(0) {
 	for(i=0; i<n; i++) {
 		for(j=0; j<=i; j++) {
@@ -714,6 +715,7 @@ FTV_REAL_TRY(0) {
 	re:
 	if(ret==0) printf("## Cholesky_Decomp not equal\n");
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
+	my_stopwatch_stop(4);
 	return ret;
 }
 
