@@ -1394,9 +1394,9 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 		}
 	}
 	DBG(printf("[DTRSV_FT]Normal call to dtrsv.. nonEqualCount=%d\n", nonEqualCount));
+	SW3START; 
 	SUPERSETJMP("Just before dtrsv");
 	if(jmpret != 0) { goto kk; }
-	SW3START; 
 	int ret = gsl_blas_dtrsv(uplo, TransA, Diag, A, X);
 	SW3STOP; 
 	if(ret != GSL_SUCCESS) { DBG(printf("[DTRSV_FT3] GSL_ERROR occurred\n")); isEqual=1; /* To force the routine to quit */ } 
