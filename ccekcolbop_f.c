@@ -34,6 +34,8 @@
 volatile long poecc_num_encoded_f = 0;
 volatile long poecc_num_corrected_f = 0;
 
+#define noinline __attribute__((noinline))
+
 /* The doctor is examining the patient. If patient's diseases get discovered, cure them. */
 /* It's possible to speculate the range of the size of the patient from the size of the 
  * doctor and vice versa, the exact sizes still need be fed into the call. */

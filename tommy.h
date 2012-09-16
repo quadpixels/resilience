@@ -38,6 +38,22 @@ extern jmp_buf buf_2;
 }
 #endif
 
+/* To enable/disable verbose output */
+
+
+//#define DEBUG
+#ifdef DEBUG    
+#define DBG(call) { call; }
+#else   
+#define DBG(call) {}
+#endif
+
+
+/* Schifra has been eliminated because it was too inefficient */
+
+/* CRC-32b.h has also been eliminated. A much simpler sum is OK. */
+
+>>>>>>> 71a15788c8a9d1f5f050fb4fdfbd5e48a849fce1
 /* The SIGSEGV handler */
 #define UNWIND
 #ifdef __cplusplus
