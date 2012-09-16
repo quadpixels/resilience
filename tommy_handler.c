@@ -1,4 +1,5 @@
 #include "tommy.h"
+#include "tommy_config.h"
 
 // Used for sigmentation fault handler and long jmp.
 
@@ -57,6 +58,8 @@ void my_action(int sig) {
 	my_stopwatch_checkpoint(5);
 	_count = _count + 1;
 	printf(" >> Caught SIGSEGV signal (%d out of %d allowed)\n", _count, NUM_OF_SIGSEGV);
+	time_t rawtime; struct tm *timeinfo; time(&rawtime); timeinfo = localtime(&rawtime);
+	printf("    Time: %s", asctime(timeinfo)); // Structure tm is statically allocated.
 	
 	/* Backtrace stuff */
 	void* array[10];
@@ -83,6 +86,7 @@ void my_action(int sig) {
 		else if(sum2 != sum1 && sum1 == sum3) memcpy(&buf_1, &buf, sizeof(jmp_buf));
 		else if(sum3 != sum2 && sum2 == sum1) memcpy(&buf_2, &buf, sizeof(jmp_buf));
 		DBG(printf("Now, sum(buf) = %u\n", GetJmpBufChecksum(&buf)));
+		printf("\n");
 		siglongjmp(buf, 1); 
 	}
 	printf(" >> Execution not expected here.\n");

@@ -7,9 +7,6 @@
 #ifndef TOMMY_H
 #define TOMMY_H
 
-// 2012-08-18: Added a branch "master". May merge some time.
-#define GO_HOME_IN_A_TANK
-
 #define forceinline __inline__ __attribute__((always_inline))
 #define noinline __attribute__((noinline))
 #include <execinfo.h>
@@ -28,6 +25,9 @@
 #include <signal.h>
 #include <setjmp.h>
 
+/* Configuration! */
+#include "tommy_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,21 +37,6 @@ extern jmp_buf buf_2;
 #ifdef __cplusplus
 }
 #endif
-
-/* To enable/disable verbose output */
-
-
-#define DEBUG
-#ifdef DEBUG    
-#define DBG(call) { call; }
-#else   
-#define DBG(call) {}
-#endif
-
-
-/* Schifra has been eliminated because it was too inefficient */
-
-/* CRC-32b.h has also been eliminated. A much simpler sum is OK. */
 
 /* The SIGSEGV handler */
 #define UNWIND
@@ -193,20 +178,11 @@ double my_sum_matrix(const gsl_matrix*);
 #define EPSILON 0.00001
 // These tolerances are inclusive. E.G., if 1 is set, then a[i]/b[i]==1 is treated as equal.
 
-#ifdef DTRSV_EXPERIMENT
-#define FT_TOLERANCE 0.01
-#else
-#define FT_TOLERANCE       0.0001
-#endif
 /*
 #define FT_TOLERANCE_LOWER 0.999999999999
 #define FT_TOLERANCE_UPPER 1.000000000001
 */
 
-#define NUM_OF_RERUN 35	// Up to how many re-runs ? If the number is exceeded the program would return the last result
-#define NUM_OF_SIGSEGV 1500 // Up to how many SIGSEGV's ? If the number is exceeded the program would be aborted.
-			   // 04-21-2012 Increased for running LASSO @ FR 1e-07...
-			   // 08-18-2012 To pass the tough 4-MM test, we need some more seg-fault tolerance.
 
 struct matrix_ECC {
 	int size1;

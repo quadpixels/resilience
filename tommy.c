@@ -1,5 +1,6 @@
 // BRANCH "Master" --------> This code lets you go home in a TANK!
 // 08-12: Re-write some of the FT routines. Hope it will be fault-tolerant.
+#include "tommy_config.h"
 #include "tommy.h"
 #include "triplicate.h"
 #include <sys/signal.h>

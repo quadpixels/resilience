@@ -2,6 +2,7 @@
 #define _TRIPLICATE_H
 
 #include <gsl/gsl_matrix.h>
+#include "tommy_config.h"
 
 #define noinline __attribute__((noinline))
 noinline unsigned long trick_me_ptr(unsigned long, int);

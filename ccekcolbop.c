@@ -49,8 +49,8 @@
 #endif
 #endif
 
-long poecc_num_encoded = 0;
-long poecc_num_corrected = 0;
+volatile long poecc_num_encoded = 0;
+volatile long poecc_num_corrected = 0;
 
 /* The doctor is examining the patient. If patient's diseases get discovered, cure them. */
 /* It's possible to speculate the range of the size of the patient from the size of the 
@@ -213,7 +213,7 @@ unsigned int encode(const double* array, const int len, void** backup) {
 	poecc_num_encoded += len;
 	int jmpret = 0;
 	SUPERSETJMP("Block ECC encode()");
-	printf("[encode] array=%lx len=%d backup=%lx\n", (unsigned long)array, len, (unsigned long)backup);
+	DBG(printf("[encode] array=%lx len=%d backup=%lx\n", (unsigned long)array, len, (unsigned long)backup));
 
 	/* Profiling */
 	#ifdef TOMMY_H
@@ -369,16 +369,7 @@ FTV_REAL_TRY(0) {
 		/* 2.1 Column sums 
 		 * We use row major here, so a[1,2,3,4,5] is a row,
 		 * a[1,6,11,16,21] is a column. */
-		#ifndef FT_ENCODExx
-		// Replicating colId is no good
 		for(colId=0, pColStart = pStart+colId; (colId<BLK_LEN && pColStart<pEnd); colId++, pColStart++) {
-		#else
-		for(colId=0, colId1=1, colId2=2,
-			pColStart=pStart+colId, pColStart=pColStart+1,	pColStart2=pColStart+2;
-			(colId<BLK_LEN && pColStart<pEnd);
-			colId++, colId1++, colId2++, pColStart++, pColStart1++, pColStart2++,
-			PROTECT_IDX_COLID_COLSTART) {
-		#endif
 			colSum = 0;
 			pCSum = offsetOut + i*(BLK_LEN*2 + 1) + colId + BLK_LEN;
 			/* Each element in the column. If there is no element due to being out of bounds then

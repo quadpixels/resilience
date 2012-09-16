@@ -1,13 +1,38 @@
 #include "ccekcolbop.h"
+#include "real.h"
+#include "tommy.h"
+#include "triplicate.h"
+#include <sys/signal.h>
+#include <signal.h>
+
 #define FT_ROUTINES_VULN
 #ifdef FT_ROUTINES_VULN
-#include "real.h"
+	#ifndef FT3TEST
+		#define FTV_REAL_TRY(label) REAL_TRY(label)
+		#define FTV_REAL_CATCH(label) REAL_CATCH(label)
+		#define FTV_REAL_END(label) REAL_END(label)
+	#else
+		#define FTV_REAL_TRY(label) ;
+		#define FTV_REAL_CATCH(label) ;
+		#define FTV_REAL_END(label) ;
+	#endif
 #else
-#include "spoof_real.h"
+	#define FTV_REAL_TRY(label) ;
+	#define FTV_REAL_CATCH(label) ;
+	#define FTV_REAL_END(label) ;
 #endif
 
-long poecc_num_encoded_f = 0;
-long poecc_num_corrected_f = 0;
+// Debug outputs
+#ifndef DBG
+#ifdef DEBUG
+#define DBG(call) {call;}
+#else
+#define DBG(call) {}
+#endif
+#endif
+
+volatile long poecc_num_encoded_f = 0;
+volatile long poecc_num_corrected_f = 0;
 
 /* The doctor is examining the patient. If patient's diseases get discovered, cure them. */
 /* It's possible to speculate the range of the size of the patient from the size of the 
@@ -16,7 +41,7 @@ noinline
 void do_decode_float(float* patient, const int offsetPatient, const int lenPatient, 
 	const float* doc, const int offsetDoc, const int lenDoc) /* lenDoc in num of elements */
 {
-REAL_TRY(0) {
+//FTV_REAL_TRY(0) {
 	float colSums[BLK_LEN], rowSums[BLK_LEN], tileSum, grandTotal, rowSum=0, colSum=0;
 	unsigned int isColDiff[BLK_LEN], isRowDiff[BLK_LEN]; /* If isColDiff[2] is 1, then column sum 2 is different */
 	int nTiles = (lenDoc - 1) / (2*BLK_LEN + 1), pRSum, pCSum;
@@ -103,12 +128,26 @@ REAL_TRY(0) {
 			}
 		}
 	}
-	}REAL_CATCH(0) {} REAL_END(0);
+//	}FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 }
 
 noinline
 void decode_float(float* patient, const int lenPatient, const float* doc) {
-REAL_TRY(0) {
+	DBG(printf("[decode_float] patient=%lx lenPatient=%d doc=%lx\n", (unsigned long)patient, lenPatient, (unsigned long)doc));
+	int jmpret = 0;
+	SUPERSETJMP("Block ECC decode_float()");
+
+	#ifdef TOMMY_H
+	my_stopwatch_checkpoint(8);
+	#endif
+
+FTV_REAL_TRY(0) {
+	/* Perhaps protecting patient and doctor also? */
+	unsigned long p0, p1, p2;
+	unsigned long d0, d1, d2;
+	TRIPLICATE(patient, p0, p1, p2);
+	TRIPLICATE(doc, d0, d1, d2);
+
 	const int nTiles = ((lenPatient-1) / BLKSIZE) + 1;
 	const int eccSize = ((nTiles*BLK_LEN*2) + nTiles + 1);
 	const int nTilesEccEcc = ((eccSize-1) / BLKSIZE) + 1;
@@ -116,17 +155,31 @@ REAL_TRY(0) {
 
 	/* If we need to correct the ECC itself first.... */
 	int i; for(i=0; i<ECCECC; i++) {
-		do_decode_float((void*)doc, 0, eccSize, doc, eccSize+eccEccSize*i, eccEccSize);
+		TRI_RECOVER(d0, d1, d2);
+		do_decode_float((float*)doc, 0, eccSize, (const float*)doc, eccSize+eccEccSize*i, eccEccSize);
 	}
+	TRI_RECOVER(p0, p1, p2);
+	TRI_RECOVER(d0, d1, d2);
 
-	do_decode_float(patient, 0, lenPatient, doc, 0, eccSize); /* lenDoc in num of elements */
-} REAL_CATCH(0) {} REAL_END(0);
+	do_decode_float((float*)p0, 0, lenPatient, (const float*)d0, 0, eccSize); /* lenDoc in num of elements */
+} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
+	#ifdef TOMMY_H
+	my_stopwatch_stop(8);
+	#endif
 }
 
 noinline
 void encode_float(const float* array, const int len, void** backup) {
 	poecc_num_encoded_f += len;
-REAL_TRY(0) {
+	int jmpret = 0;
+	SUPERSETJMP("Block ECC encode_float()");
+	DBG(printf("[encode_float] array=%lx, len=%d, backup=%lx\n", (unsigned long)array,
+		len, (unsigned long)backup));
+
+	#ifdef TOMMY_H
+	my_stopwatch_checkpoint(8);
+	#endif
+	
 	/* 1. Some preparations. */
 	const int nTiles = ((len-1) / BLKSIZE) + 1;
 	const int eccSize = ((nTiles*BLK_LEN*2) + nTiles + 1);
@@ -137,6 +190,7 @@ REAL_TRY(0) {
 	/* 2. Allocating space */
 	float* ret = (float*)malloc(sizeof(float) * retSize);
 	
+FTV_REAL_TRY(0) {
 	/* 3. Calculate the ECC of the input array and the ECC of the ECC. */
 	do_encode_float(array, 0, len, ret, 0);
 	if(ECCECC>0) do_encode_float(ret, 0, eccSize, ret, eccSize); // Hierarchical ECC
@@ -184,7 +238,7 @@ REAL_TRY(0) {
 	my_stopwatch_stop(8);
 	#endif
 
-} REAL_CATCH(0) {} REAL_END(0);
+} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 
 }
 
@@ -239,14 +293,26 @@ void do_encode_2_float(const float* in, const int offsetIn, const int lenIn, flo
 /* Do encoding of array in[offset:len], store it into out */
 noinline
 void do_encode_float(const float* in, const int offsetIn, const int lenIn, float* out, const int offsetOut) {
-REAL_TRY(0) {
+FTV_REAL_TRY(0) {
 	/* 1. Some preparations. */
 	int i, rowId, colId, j, k, pRowStart, pColStart, p; /* Pointer to array */
+	#ifdef FT_ENCODE
+		int i1, i2, j1, j2, k1, k2;
+		int colId1, colId2, pColStart1, pColStart2;
+		unsigned long out0, out1, out2;
+		TRIPLICATE(out, out0, out1, out2);
+	#endif
 	int pCSum, pRSum, pTileSum, pGrandTotal; /* Pointer to ECC code */
 	float colSum, rowSum, tileSum, grandTotal=0; /* I think we should avoid segfaults by using as few mallocs as possible. */
 	const int nTiles = ((lenIn-1) / BLKSIZE) + 1;
 
-	for(i=0; i<nTiles; i++) {
+	#ifndef FT_ENCODE
+		for(i=0; i<nTiles; i++) {
+	#else
+		for(i=0, i1=1, i2=2; i<nTiles; i++, i1++, i2++, PROTECT_IDX_I) {
+			TRI_RECOVER(out0, out1, out2);
+			if(out!=(double*)out0) out=(double*)out0;
+	#endif
 		int pStart = offsetIn + i*BLKSIZE, pEnd = pStart + BLKSIZE;
 		if(pEnd > offsetIn + lenIn) pEnd=offsetIn + lenIn;
 		/* 2.1 Column sums 
@@ -281,7 +347,7 @@ REAL_TRY(0) {
 	pGrandTotal = offsetOut + nTiles*(BLK_LEN*2+1);
 	out[pGrandTotal] = grandTotal;
 	printf(" >> [do_encode_float] Done. Grand Total=%g\n", grandTotal);
-} REAL_CATCH(0) {} REAL_END(0);
+} FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 }
 
 /* main() is for testing purposes. */
@@ -335,7 +401,6 @@ int main(int argc, char** argv) {
 }
 #endif
 
-__attribute__((noinline))
 void POECC_FLOAT_SUMMARY() {
 	printf("[[ PoECC Ver 2 SUMMARY (single precision ver) ]]\n");
 	printf(">> Elems encoded: %d\n", poecc_num_encoded_f);

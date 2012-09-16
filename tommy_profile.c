@@ -1,4 +1,5 @@
 #include "tommy.h"
+#include "tommy_config.h"
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
