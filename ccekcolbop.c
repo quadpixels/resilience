@@ -23,7 +23,7 @@
 #endif
 
 // When fault rate is above 1e-05, we must enforce fault tolerance mechanisms on the encoding library
-#define FT_ENCODE
+//#define FT_ENCODE
 #ifdef FT_ENCODE
 	#define PROTECT_IDX_I  \
 	((i!=i1-1) && (i1-1==i2-2) && (i=i1-1)), \
