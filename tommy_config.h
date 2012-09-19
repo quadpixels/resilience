@@ -8,6 +8,13 @@
 #define DBG(call) {}
 #endif
 
+// 1.5 Log all calls to (FT) GSL routines ?
+#ifdef LOGCALLS
+#define LOGCALL(call) { printf(">>>---"); call; }
+#else
+#define LOGCALL(call) {}
+#endif
+
 // 2. Number of maximum consecutive re-calculations
 #define NUM_OF_RERUN 35	// Up to how many re-runs ? If the number is exceeded the program would return the last result
 

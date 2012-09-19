@@ -50,7 +50,6 @@ void MY_REMOVE_SIGSEGV_HANDLER() {
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGSEGV, &sa, NULL);
 	sigaction(SIGBUS,  &sa, NULL);
-	printf(" >> Unsetted.\n");
 }
 
 noinline

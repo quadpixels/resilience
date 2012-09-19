@@ -80,7 +80,7 @@ noinline unsigned long my_stopwatch_get(int id) {
 }
 
 noinline void my_stopwatch_show(int id, char* extra_msg, char writeToFile) {
-	char k[100];
+	char k[300];
 	sprintf(k, "[PID=%u][my_stopwatch_show #%d] %lu microseconds (%s|%s).\n", (unsigned int)getpid(), id, my_stopwatch_get(id), _swMessage[id], extra_msg);
 	printf("%s", k);
 	if(writeToFile==1) {
