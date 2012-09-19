@@ -9,8 +9,9 @@
 #endif
 
 // 1.5 Log all calls to (FT) GSL routines ?
+#define LOGCALLS
 #ifdef LOGCALLS
-#define LOGCALL(call) { printf(">>>---"); call; }
+#define LOGCALL(call) { printf(">>>---[PID=%d]", getpid()); call; }
 #else
 #define LOGCALL(call) {}
 #endif

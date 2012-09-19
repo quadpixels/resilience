@@ -6,6 +6,8 @@
 #include <sys/signal.h>
 #include <signal.h>
 #include "real.h"
+#include <sys/types.h>
+#include <unistd.h> // For GetPID()
 
 #define FT_ROUTINES_VULN
 #ifdef FT_ROUTINES_VULN
@@ -39,6 +41,11 @@
 #endif
 
 #define noinline __attribute__((noinline))
+
+void EmptyRoutineInfo(RoutineInfo* i) {
+	i->n_sigsegv_comp = 0;
+	i->n_algo_retry   = 0;
+}
 
 int nonEqualCount = 0;
 // int num_total_retries = 0; // Moved to tommy_handler.c
@@ -875,9 +882,8 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 			double beta, gsl_matrix* matC)
 
 {
-	LOGCALL(printf("gsl_blas_dgemm A=%lux%lu B=%lux%lu C=%lux%lu\n",
-		matA->size1, matA->size2, matB->size1, matB->size2, matC->size1,
-		matC->size2));
+	RoutineInfo info; EmptyRoutineInfo(&info);
+
 	/* Protect the pointers to matrix A, B, (the original) C */
 	unsigned long matA_0, matA_1, matA_2, 
 	     matB_0, matB_1, matB_2,
@@ -984,6 +990,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	SW3START;
 	SUPERSETJMP("Just before dgemm");
 	if(jmpret != 0) {
+		info.n_sigsegv_comp += 1;
 		goto kk;
 	}
 	gsl_blas_dgemm(TransA, TransB, alpha, matA, matB, beta, matC);
@@ -997,6 +1004,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 		nonEqualCount = nonEqualCount + 1;
 		num_total_retries += 1;
 		num_retries_mm += 1;
+		info.n_algo_retry += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			printf("[DGEMM_FT3]Restart calculation.\n");
 			if((nonEqualCount & 2)==2) AdjustIsEqualKnob(1);
@@ -1045,6 +1053,11 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	} else {
 		printf("Oops. There is a segfault while trying to free. giving up freeing.");
 	}
+
+	// Last, print out le summary to le konsole.
+	LOGCALL(printf("gsl_blas_dgemm A=%lux%lu B=%lux%lu C=%lux%lu n_sigsegv_jump=%d n_algo_retry=%d\n",
+		matA->size1, matA->size2, matB->size1, matB->size2, matC->size1,
+		matC->size2, info.n_sigsegv_comp, info.n_algo_retry));
 }
 
 noinline
@@ -1052,6 +1065,8 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 			const gsl_matrix* matA, const gsl_vector* vecX, 
 			double beta, gsl_vector* vecY)
 {
+	RoutineInfo info; EmptyRoutineInfo(&info); 
+
 	/* Protect pointers to matrix A, vectors X and (the original) Y */
 	unsigned long matA0, matA1, matA2,
 	              vecX0, vecX1, vecX2,
@@ -1160,6 +1175,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	SW3START; 
 	SUPERSETJMP("Just before DGEMV");
 	if(jmpret != 0) {
+		info.n_sigsegv_comp++;
 		goto kk;
 	}
 	gsl_blas_dgemv(Trans, alpha, matA, vecX, beta, vecY);
@@ -1174,6 +1190,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 		nonEqualCount = nonEqualCount + 1;
 		num_total_retries += 1;
 		num_retries_mv += 1;
+		info.n_algo_retry += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[DGEMV_FT3]Restart calculation.\n"));
 			if((nonEqualCount % 4)==4) AdjustIsEqualKnob(1);
@@ -1206,6 +1223,10 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 		DBG(printf("Oops. Something wrong trying to free the memory. Giving up freeing."));
 	}
 	MY_REMOVE_SIGSEGV_HANDLER();
+
+	// Last, print out the summary
+	LOGCALL(printf("gsl_blas_dgemv A=%lux%lu X=%lux1 Y=%lux1 sigsegv_comp=%d algo_retry=%d\n",
+		matA->size1, matA->size2, vecX->size, vecY->size, info.n_sigsegv_comp, info.n_algo_retry));
 }
 
 noinline
@@ -1213,6 +1234,8 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	           double alpha, const gsl_matrix* A,
 		   double beta, gsl_matrix* C)
 {
+	RoutineInfo info; EmptyRoutineInfo(&info);
+	
 	/* Protect pointers to matrix A and matrix C */
 	unsigned long matA0, matA1, matA2,
 	              matC0, matC1, matC2,
@@ -1274,7 +1297,10 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	DBG(printf("[DSYRK_FT3]Normal call to dsyrk.. nonEqualCount=%d\n", nonEqualCount));
 	my_stopwatch_checkpoint(3); 
 	SUPERSETJMP("Just before dsyrk");
-	if(jmpret != 0) { goto kk; }
+	if(jmpret != 0) { 
+		info.n_sigsegv_comp += 1;
+		goto kk; 
+	}
 	gsl_blas_dsyrk(uplo, trans, alpha, A, beta, C);
 	my_stopwatch_stop(3);
 	my_stopwatch_checkpoint(11); // Time spent in checks
@@ -1287,6 +1313,7 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		nonEqualCount = nonEqualCount + 1;
 		num_total_retries += 1;
 		num_retries_rk += 1;
+		info.n_algo_retry += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[DSYRK_FT3]Restart calculation.\n"));
 			if((nonEqualCount % 4) == 0) AdjustIsEqualKnob(1);
@@ -1314,6 +1341,10 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		
 	}
 	MY_REMOVE_SIGSEGV_HANDLER();
+
+	// Last, print out summary.
+	LOGCALL(printf("gsl_blas_dsyrk A=%lux%lu C=%lux%lu n_sigsegv_comp=%d n_algo_retry=%d\n",
+		A->size1, A->size2, C->size1, C->size2, info.n_sigsegv_comp, info.n_algo_retry));
 }
 
 noinline
@@ -1321,6 +1352,8 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 			CBLAS_DIAG_t Diag, const gsl_matrix* A, 
 			gsl_vector* X)
 {
+	RoutineInfo info; EmptyRoutineInfo(&info);
+
 	/* Protect pointers to A and X */
 	unsigned long matA_0, matA_1, matA_2,  // A
 	              vecX_0, vecX_1, vecX_2,  // X
@@ -1400,7 +1433,10 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 	DBG(printf("[DTRSV_FT]Normal call to dtrsv.. nonEqualCount=%d\n", nonEqualCount));
 	SW3START; 
 	SUPERSETJMP("Just before dtrsv");
-	if(jmpret != 0) { goto kk; }
+	if(jmpret != 0) {
+		info.n_sigsegv_comp += 1;
+		goto kk; 
+	}
 	int ret = gsl_blas_dtrsv(uplo, TransA, Diag, A, X);
 	SW3STOP; 
 	if(ret != GSL_SUCCESS) { DBG(printf("[DTRSV_FT3] GSL_ERROR occurred\n")); isEqual=1; /* To force the routine to quit */ } 
@@ -1412,6 +1448,7 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 		num_total_retries += 1;
 		num_retries_sv += 1;
 		nonEqualCount = nonEqualCount + 1;
+		info.n_algo_retry += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[DTRSV_FT]Restart calculation.\n"));
 			goto kk; 
@@ -1435,11 +1472,17 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 	}
 	DBG(printf("Released.\n"));
 	MY_REMOVE_SIGSEGV_HANDLER();
+
+	// Last: print out summary
+	LOGCALL(printf("gsl_blas_dtrsv A=%lux%lu X=%lux1 n_sigsegv_comp=%d n_algo_retry=%d\n",
+		A->size1, A->size2, X->size, info.n_sigsegv_comp, info.n_algo_retry));
 }
 
 noinline
 void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
-{
+{	
+	RoutineInfo info; EmptyRoutineInfo(&info);
+
 	// This one is easier, we only have one matrix to protect
 	double sumA; 
 	sumA=my_sum_matrix(A);
@@ -1522,6 +1565,7 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 	SW3START; 
 	SUPERSETJMP("Just before cholesky_decomp");
 	if(jmpret != 0) {
+		info.n_sigsegv_comp += 1;
 		goto kk;
 	}
 	int ret = gsl_linalg_cholesky_decomp(A); 
@@ -1535,6 +1579,7 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 		nonEqualCount = nonEqualCount+1; 
 		num_total_retries += 1;
 		num_retries_cd += 1;
+		info.n_algo_retry += 1;
 		if(nonEqualCount < NUM_OF_RERUN) {
 			DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Restart calculation.\n"));
 			if((nonEqualCount & 4)==4) AdjustIsEqualKnob(1);
@@ -1556,6 +1601,10 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 		gsl_matrix_free(A_bak);
 	}
 	MY_REMOVE_SIGSEGV_HANDLER(); 
+	
+	// Last: print out summary
+	LOGCALL(printf("gsl_linalg_cholesky_decomp A=%lux%lu n_sigsegv_comp=%d n_algo_retry=%d\n",
+		A->size1, A->size2, info.n_sigsegv_comp, info.n_algo_retry));
 }
 
 // Taken from tommy.h

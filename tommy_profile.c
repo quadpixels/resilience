@@ -4,6 +4,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define STOPWATCH_INCREMENT(id) \
 	if(g_ptv[id]==NULL) g_ptv[id]=&g_tvTick[id]; \
 	struct timeval* ptv_late  = g_ptv[id]; \
@@ -101,3 +105,6 @@ noinline void my_stopwatch_show(int id, char* extra_msg, char writeToFile) {}
 #define SW3START my_stopwatch_checkpoint(3)
 #define SW3STOP my_stopwatch_stop(3)
 
+#ifdef __cplusplus
+}
+#endif
