@@ -141,9 +141,25 @@ int my_dgemm_actual(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB, double a
 
 noinline int my_dgemm(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB, double alpha, const gsl_matrix* A, const gsl_matrix* B, double beta, gsl_matrix* C) {
 	MY_SET_SIGSEGV_HANDLER();
-	int jmpret = sigsetjmp(buf, 1);
-	trick_me_jr(jmpret);
-	return my_dgemm_actual(TransA, TransB, alpha, A, B, beta, C);
+	int jmpret = 0;
+	SUPERSETJMP("Just before my_dgemm_actual");
+	gsl_matrix* C_bak;
+	volatile int n_failure = 0;
+	if(jmpret == 0) { // This piece of code demonstrates the fault-tolerance coding idiom.
+		C_bak = gsl_matrix_alloc(C->size1, C->size2);
+		gsl_matrix_memcpy(C_bak, C);
+	} else {
+		gsl_matrix_memcpy(C, C_bak);
+		n_failure++;
+		num_retries_mm++;  // should be considered another variant of MM.
+		if(n_failure > 2) return 0;
+	}
+	int ret = my_dgemm_actual(TransA, TransB, alpha, A, B, beta, C);
+	SUPERSETJMP("Just before free after my_dgemm_actual");
+	if(jmpret == 0) {
+		gsl_matrix_free(C_bak);
+	} else {}
+	return ret;
 }
 
 noinline 
@@ -181,9 +197,26 @@ int my_dgemv_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, 
 noinline
 int my_dgemv(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, const gsl_vector* X, double beta, gsl_vector* Y) {
 	MY_SET_SIGSEGV_HANDLER();
-	int jmpret = sigsetjmp(buf, 1);
-	trick_me_jr(jmpret);
-	return my_dgemv_actual(Trans, alpha, A, X, beta, Y);
+	int jmpret = 0;
+	SUPERSETJMP("Just before my_dgemv_actual");
+	gsl_vector* Y_bak;
+	volatile int n_failure = 0;
+	if(jmpret == 0) {
+		Y_bak = gsl_vector_alloc(Y->size);
+		gsl_vector_memcpy(Y_bak, Y);
+	} else {
+		n_failure++;
+		num_retries_mv++;
+		if(n_failure > 2) return 0;
+		gsl_vector_memcpy(Y, Y_bak);
+	}
+	int ret = my_dgemv_actual(Trans, alpha, A, X, beta, Y);
+	SUPERSETJMP("Just before free() after my_dgemv_actual");
+	if(jmpret == 0) {
+		gsl_vector_free(Y_bak);
+	} else {
+	}
+	return ret;
 }
 
 noinline 
@@ -217,9 +250,25 @@ FTV_REAL_TRY(0) {
 noinline
 int my_dgemv_upperlower(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, const gsl_vector* X, double beta, gsl_vector* Y) {
 	MY_SET_SIGSEGV_HANDLER();
-	int jmpret = sigsetjmp(buf, 1);
-	trick_me_jr(jmpret);
-	return my_dgemv_upperlower_actual(uplo, Trans, alpha, A, X, beta, Y);
+	int jmpret = 0;
+	SUPERSETJMP("Just before my_dgemv_upperlower_actual");
+	gsl_vector* Y_bak;
+	volatile int n_failure = 0;
+	if(jmpret == 0) {
+		Y_bak = gsl_vector_alloc(Y->size);
+		gsl_vector_memcpy(Y_bak, Y);
+	} else {
+		n_failure++;
+		num_retries_mv++;
+		if(n_failure > 2) return 0;
+		gsl_vector_memcpy(Y, Y_bak);
+	}
+	int ret =my_dgemv_upperlower_actual(uplo, Trans, alpha, A, X, beta, Y);
+	SUPERSETJMP("Just before free() after my_dgemv_upperlower_actual");
+	if(jmpret == 0) {
+		gsl_vector_free(Y_bak);
+	} else {}
+	return ret;
 }
 
 void my_remove_SIGSEGV_handler() {
