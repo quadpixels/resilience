@@ -65,7 +65,7 @@ void my_action(int sig) {
 	char** strings;
 	size_t size;
 	size = backtrace(array, 10);
-	printf(" >> Stack contents (level=%d):\n", size);
+	printf(" >> Stack contents (level=%ld):\n", size);
 	backtrace_symbols_fd(array, size, 2);
 #ifdef UNWIND
 	printf(" >> Stack contents by libunwind\n");

@@ -38,9 +38,6 @@ extern jmp_buf buf_2;
 }
 #endif
 
-/* To enable/disable verbose output */
-
-
 //#define DEBUG
 #ifdef DEBUG    
 #define DBG(call) { call; }
@@ -90,6 +87,16 @@ void my_action(int sig);
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* This data structure records 1 call to an FT routine.
+ * That's why we don't need "number of call to this routine" b/c it is 1.
+ */
+typedef struct _RoutineInfo {
+	volatile int n_sigsegv_comp;
+	volatile int n_algo_retry;
+} RoutineInfo;
+void EmptyRoutineInfo(RoutineInfo*);
+
 noinline void my_stopwatch_checkpoint(int id);
 noinline void my_stopwatch_stop(int id);
 noinline unsigned long my_stopwatch_get(int id);
@@ -140,11 +147,13 @@ unsigned long CRC_Vector(const gsl_vector*);
  /* Added on Apr 18 */
 double my_sum_vector(const gsl_vector*);
 double my_sum_matrix(const gsl_matrix*);
+
+void EmptyRoutineInfo(RoutineInfo*);
+void MY_ROUTINES_SUMMARY(); // How many times each routine has been called.
+
 #ifdef __cplusplus
 }
 #endif
-
-
 
 /* To configure PoECC's version */
 /* Changed on 2012-05-06 */

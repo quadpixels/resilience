@@ -456,8 +456,8 @@ int main(int argc, char** argv) {
 noinline
 void POECC_SUMMARY() {
 	printf("[[ PoECC Ver 2 SUMMARY]]\n");
-	printf(">> Elems encoded: %d\n", poecc_num_encoded);
-	printf(">> Elems corrected: %d\n", poecc_num_corrected);
+	printf(">> Elems encoded: %ld\n", poecc_num_encoded);
+	printf(">> Elems corrected: %ld\n", poecc_num_corrected);
 }
 
 #undef DBG
