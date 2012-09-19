@@ -453,6 +453,7 @@ int main(int argc, char** argv) {
 }
 #endif
 
+noinline
 void POECC_SUMMARY() {
 	printf("[[ PoECC Ver 2 SUMMARY]]\n");
 	printf(">> Elems encoded: %d\n", poecc_num_encoded);

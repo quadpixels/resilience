@@ -53,7 +53,6 @@ extern jmp_buf buf_2;
 
 /* CRC-32b.h has also been eliminated. A much simpler sum is OK. */
 
->>>>>>> 71a15788c8a9d1f5f050fb4fdfbd5e48a849fce1
 /* The SIGSEGV handler */
 #define UNWIND
 #ifdef __cplusplus

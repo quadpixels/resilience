@@ -875,6 +875,9 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 			double beta, gsl_matrix* matC)
 
 {
+	LOGCALL(printf("gsl_blas_dgemm A=%lux%lu B=%lux%lu C=%lux%lu\n",
+		matA->size1, matA->size2, matB->size1, matB->size2, matC->size1,
+		matC->size2));
 	/* Protect the pointers to matrix A, B, (the original) C */
 	unsigned long matA_0, matA_1, matA_2, 
 	     matB_0, matB_1, matB_2,
