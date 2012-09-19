@@ -137,7 +137,7 @@ unsigned int failed_corr = 0;
 					printf("[debug] Correcting patient[%d] from %f to %f\n",
 					p, patient[p], sum);
 #endif
-					patient[p] = sum;
+					patient[p] = sum; poecc_num_corrected++;
 				}
 			}
 			if(nDiffCols==1) {
@@ -152,7 +152,7 @@ unsigned int failed_corr = 0;
 					printf("[debug] Correcting patient[%d] from %f to %f\n",
 					p, patient[p], sum);
 #endif
-					patient[p] = sum;
+					patient[p] = sum; poecc_num_corrected++;
 				}
 			}
 			}
