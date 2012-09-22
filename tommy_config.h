@@ -32,3 +32,5 @@
 // 5. Disable profiling ?
 //#define PROFILE_DISABLED
 
+// 6. Enable input checksum for MV ?
+#define ENABLE_POECC_MV
