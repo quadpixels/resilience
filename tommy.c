@@ -1186,10 +1186,11 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 		DBG(printf("[DGEMV_FT3]Recovering input...\n"));
 		{
 			#ifdef ENABLE_POECC_MV
-			if(1) {
+			if(1)
 			#else
-			if(0) {
+			if(0)
 			#endif
+			{
 				{ // Recover input data A
 					DBG(printf("[DGEMV_FT3]Recovering A ... \n"));
 					size_t *mas1 = &(((gsl_matrix*)matA)->size1);
@@ -1231,6 +1232,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 					size_t* vyst = &(((gsl_vector*)vecY)->stride);
 					TRI_RECOVER_SIZE_T((*vyst), vyst0,vyst1,vyst2);
 				}
+			} // End of if MV ECC not defined
 			gsl_vector_memcpy(vecY, vecY_bak);
 		} 
 		my_stopwatch_stop(6);
