@@ -1,5 +1,24 @@
 // Configuration header file for soft error analysis //
 
+// 0. Enable Application Fault Injection ?
+//#define APP_VULN
+#ifdef APP_VULN
+	#ifndef FT3TEST
+	#define APPV_REAL_TRY(label) REAL_TRY(label)
+	#define APPV_REAL_CATCH(label) REAL_CATCH(label)
+	#define APPV_REAL_END(label) REAL_END(label)
+	#else
+		#define APPV_REAL_TRY(label) ;
+		#define APPV_REAL_CATCH(label) ;
+		#define APPV_REAL_END(label) ;
+	#endif
+#else
+	#define APPV_REAL_TRY(label) ;
+	#define APPV_REAL_CATCH(label) ;
+	#define APPV_REAL_END(label) ;
+#endif
+
+
 // 1. Enable debug verbose output?
 //#define DEBUG
 #ifdef DEBUG
