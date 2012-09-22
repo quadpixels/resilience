@@ -711,7 +711,6 @@ int Is_GSL_DGEMV_Equal(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* 
 
 /* Check dtrsv routine, should be inv(op(A)) * X2 == X */
 int Is_GSL_DTRSV_Equal(CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t TransA, CBLAS_DIAG_t diag, const gsl_matrix* A, const gsl_vector* X, const gsl_vector* X2) {
-	my_stopwatch_checkpoint(4);
 	if(A->size1 != A->size2) { printf("[Is_GSL_DTRSV_Equal] Matrix A is not square.\n"); return -1; }
 	if(A->size1 != X->size)  { printf("[Is_GSL_DTRSV_Equal] Sizes of A and X don't match.\n"); return -1; }
 	if(X->size  != X2->size) { printf("[Is_GSL_DTRSV_Equal] Sizes of X and X2 don't match.\n");return -1; }
@@ -730,13 +729,14 @@ int Is_GSL_DTRSV_Equal(CBLAS_UPLO_t Uplo, CBLAS_TRANSPOSE_t TransA, CBLAS_DIAG_t
 	if(diag==CblasUnit) { for(i=0; i<A->size1; i++) gsl_matrix_set(AA, i, i, 1.0); }
 	gsl_vector* XX = gsl_vector_alloc(X->size);
 	gsl_vector_set_zero(XX);
+	my_stopwatch_checkpoint(11);
 //	Print_Vector(X,  "[DTRSV Checker]X");
 //	Print_Vector(X2, "[DTRSV Checker]X2");
 	my_dgemv(TransA, 1.0, AA, X2, 0.0, XX);
 //	Print_Vector(XX, "[DTRSV Checker]Result of MV multiplication");
 	int result = Is_GSL_Vector_Equal(XX, X);
+	my_stopwatch_stop(11);
 	gsl_vector_free(XX); gsl_matrix_free(AA);
-	my_stopwatch_stop(4);
 	if(result==0) printf("## DTRSV not equal\n");
 	return result;
 }
@@ -985,6 +985,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	SUPERSETJMP("After encoding");
 	if(jmpret != 0) {
 		kk:
+		my_stopwatch_checkpoint(6);
 		/* Chasing the wind, only */
 		DBG(printf("[DGEMM_FT3]Recovering input...\n"));
 		{
@@ -1033,7 +1034,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 				printf("[DGEMM_FT3] ! memcpy returned %d\n", ec);
 			}
 		}
-
+		my_stopwatch_stop(6);
 	}
 	DBG(printf("[DGEMM_FT3]Normal call to dgemm.. nonEqualCount=%d\n", nonEqualCount));
 	SW3START;
@@ -1045,10 +1046,11 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	gsl_blas_dgemm(TransA, TransB, alpha, matA, matB, beta, matC);
 	SW3STOP;
 	DBG(printf("[DGEMM_FT3] Check Results..\n"));
+	my_stopwatch_checkpoint(11);
 	isEqual = Is_GSL_MM_Equal(TransA, TransB, alpha, matA, matB, beta, matC_bak, matC);
+	my_stopwatch_stop(11);
 	if(isEqual==1) { DBG(printf("[DGEMM_FT3]Result: Equal\n")); }
 	else {
-		my_stopwatch_checkpoint(6);
 		printf("[DGEMM_FT3]Result: NOT Equal\n");
 		nonEqualCount = nonEqualCount + 1;
 		num_total_retries += 1;
@@ -1061,7 +1063,6 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 		}
 	}
 	ResetIsEqualKnob();
-	my_stopwatch_stop(6);
 	printf("[DGEMM_FT3]Releasing memory for mat_bak's and deleting temp files\n");
 	SUPERSETJMP("Just before free");
 	if(jmpret == 0) {
@@ -1104,7 +1105,8 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	}
 
 	// Last, print out le summary to le konsole.
-	LOGCALL(printf("gsl_blas_dgemm A=%lux%lu B=%lux%lu C=%lux%lu n_sigsegv_jump=%d n_algo_retry=%d\n",
+	LOGCALL(printf("gsl_blas_dgemm %d,%d,%g,%g, A=%lux%lu B=%lux%lu C=%lux%lu n_sigsegv_jump=%d n_algo_retry=%d\n",
+		TransA, TransB, alpha, beta,
 		matA->size1, matA->size2, matB->size1, matB->size2, matC->size1,
 		matC->size2, info.n_sigsegv_comp, info.n_algo_retry));
 }
@@ -1159,14 +1161,20 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	gsl_vector_memcpy(vecY_bak, vecY);
 	TRIPLICATE(vecY_bak, vecYbak0, vecYbak1, vecYbak2);
 	TRIPLICATE(vecY_bak->data, vybkd0, vybkd1, vybkd2);
-
-	encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
-	TRIPLICATE(ecMatA, ema0, ema1, ema2);
-	encode((vecX->data), (vecX->size), &ecVecX); 
-	TRIPLICATE(ecVecX, evx0, evx1, evx2);
-	encode((vecY->data), (vecY->size), &ecVecY); 
-	TRIPLICATE(ecVecY, evy0, evy1, evy2);
 	
+	#ifdef ENABLE_POECC_MV
+	if(1) {
+	#else
+	if(0) {
+	#endif
+		encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
+		encode((vecX->data), (vecX->size), &ecVecX); 
+		encode((vecY->data), (vecY->size), &ecVecY); 
+		TRIPLICATE(ecMatA, ema0, ema1, ema2);
+		TRIPLICATE(ecVecX, evx0, evx1, evx2);
+		TRIPLICATE(ecVecY, evy0, evy1, evy2);
+	}
+
 	nonEqualCount=0;
 	int jmpret, isEqual;
 	DBG(printf("[DGEMV_FT3] 3. Setjmp\n"));
@@ -1174,51 +1182,58 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	SUPERSETJMP("[DGEMV_FT3] After encoding\n");
 	if(jmpret != 0) {
 		kk: 
+		my_stopwatch_checkpoint(6);
 		DBG(printf("[DGEMV_FT3]Recovering input...\n"));
 		{
-			{ // Recover input data A
-				DBG(printf("[DGEMV_FT3]Recovering A ... \n"));
-				size_t *mas1 = &(((gsl_matrix*)matA)->size1);
-				size_t *mas2 = &(((gsl_matrix*)matA)->size2);
-				TRI_RECOVER_SIZE_T((*mas1), mas10, mas11, mas12);
-				TRI_RECOVER_SIZE_T((*mas2), mas20, mas21, mas22);
-				TRI_RECOVER(matA0, matA1, matA2);
-				TRI_RECOVER(ema0, ema1, ema2);
-				MY_MAT_CHK_RECOVER_POECC(sumA, (void*)ema0, (gsl_matrix*)matA0);
-			}
+			#ifdef ENABLE_POECC_MV
+			if(1) {
+			#else
+			if(0) {
+			#endif
+				{ // Recover input data A
+					DBG(printf("[DGEMV_FT3]Recovering A ... \n"));
+					size_t *mas1 = &(((gsl_matrix*)matA)->size1);
+					size_t *mas2 = &(((gsl_matrix*)matA)->size2);
+					TRI_RECOVER_SIZE_T((*mas1), mas10, mas11, mas12);
+					TRI_RECOVER_SIZE_T((*mas2), mas20, mas21, mas22);
+					TRI_RECOVER(matA0, matA1, matA2);
+					TRI_RECOVER(ema0, ema1, ema2);
+					MY_MAT_CHK_RECOVER_POECC(sumA, (void*)ema0, (gsl_matrix*)matA0);
+				}
 
-			{ // Recover input data X
-				DBG(printf("[DGEMV_FT3]Recovering X ... \n"));
-				TRI_RECOVER(vecX0, vecX1, vecX2);
-				size_t *vxs = &(((gsl_vector*)vecX)->size);
-				TRI_RECOVER_SIZE_T((*vxs), vxs0, vxs1, vxs2);
-				TRI_RECOVER(evx0, evx1, evx2);
-				MY_VEC_CHK_RECOVER_POECC(sumX, (void*)evx0, (gsl_vector*)vecX0);
-			}
+				{ // Recover input data X
+					DBG(printf("[DGEMV_FT3]Recovering X ... \n"));
+					TRI_RECOVER(vecX0, vecX1, vecX2);
+					size_t *vxs = &(((gsl_vector*)vecX)->size);
+					TRI_RECOVER_SIZE_T((*vxs), vxs0, vxs1, vxs2);
+					TRI_RECOVER(evx0, evx1, evx2);
+					MY_VEC_CHK_RECOVER_POECC(sumX, (void*)evx0, (gsl_vector*)vecX0);
+				}
 
-			{ // Recover input/output data Y's backup
-			  // and copying back to Y
-			  	DBG(printf("[DGEMV_FT3]Recovering Y ... \n"));
-				TRI_RECOVER(vecYbak0, vecYbak1, vecYbak2);
-				if((unsigned long)vecY_bak!=vecYbak0) vecY_bak=(gsl_vector*)vecYbak0; 
-				size_t *vybs = &(((gsl_vector*)vecY_bak)->size);
-				TRI_RECOVER_SIZE_T((*vybs), vys0, vys1, vys2); // Y and Y_bak share
-				size_t *vybst= &(((gsl_vector*)vecY_bak)->stride);
-				TRI_RECOVER_SIZE_T((*vybst),vyst0,vyst1,vyst2);
-				TRI_RECOVER(vybkd0,vybkd1,vybkd2);
-				if(vecY_bak->data != (double*)vybkd0) vecY_bak->data=(double*)vybkd0;
-				TRI_RECOVER(evy0, evy1, evy2);                 // the same dims
-				MY_VEC_CHK_RECOVER_POECC(sumY, (void*)evy0, (gsl_vector*)vecYbak0);
+				{ // Recover input/output data Y's backup
+				  // and copying back to Y
+				  	DBG(printf("[DGEMV_FT3]Recovering Y ... \n"));
+					TRI_RECOVER(vecYbak0, vecYbak1, vecYbak2);
+					if((unsigned long)vecY_bak!=vecYbak0) vecY_bak=(gsl_vector*)vecYbak0; 
+					size_t *vybs = &(((gsl_vector*)vecY_bak)->size);
+					TRI_RECOVER_SIZE_T((*vybs), vys0, vys1, vys2); // Y and Y_bak share
+					size_t *vybst= &(((gsl_vector*)vecY_bak)->stride);
+					TRI_RECOVER_SIZE_T((*vybst),vyst0,vyst1,vyst2);
+					TRI_RECOVER(vybkd0,vybkd1,vybkd2);
+					if(vecY_bak->data != (double*)vybkd0) vecY_bak->data=(double*)vybkd0;
+					TRI_RECOVER(evy0, evy1, evy2);                 // the same dims
+					MY_VEC_CHK_RECOVER_POECC(sumY, (void*)evy0, (gsl_vector*)vecYbak0);
 				
-				TRI_RECOVER(vecY0, vecY1, vecY2);
-				if((unsigned long)vecY != vecY0) vecY = (gsl_vector*)vecY0;
-				size_t *vys  = &(((gsl_vector*)vecY)->size);
-				TRI_RECOVER_SIZE_T((*vys),  vys0, vys1, vys2);
-				size_t* vyst = &(((gsl_vector*)vecY)->stride);
-				TRI_RECOVER_SIZE_T((*vyst), vyst0,vyst1,vyst2);
-				gsl_vector_memcpy(vecY, vecY_bak);
-			}
+					TRI_RECOVER(vecY0, vecY1, vecY2);
+					if((unsigned long)vecY != vecY0) vecY = (gsl_vector*)vecY0;
+					size_t *vys  = &(((gsl_vector*)vecY)->size);
+					TRI_RECOVER_SIZE_T((*vys),  vys0, vys1, vys2);
+					size_t* vyst = &(((gsl_vector*)vecY)->stride);
+					TRI_RECOVER_SIZE_T((*vyst), vyst0,vyst1,vyst2);
+				}
+			gsl_vector_memcpy(vecY, vecY_bak);
 		} 
+		my_stopwatch_stop(6);
 	}
 	DBG(printf("[DGEMV_FT3]Normal call to dgemv.. nonEqualCount=%d\n", nonEqualCount));
 	SW3START; 
@@ -1234,7 +1249,6 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	my_stopwatch_stop(11); 
 	if(isEqual==1) { DBG(printf("[DGEMV_FT3]Result: Equal\n")); }
 	else {
-		my_stopwatch_checkpoint(6); 
 		DBG(printf("[DGEMV_FT3]Result: NOT Equal\n"));
 		nonEqualCount = nonEqualCount + 1;
 		num_total_retries += 1;
@@ -1246,7 +1260,6 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 			goto kk; 
 		}
 	}
-	my_stopwatch_stop(6); 
 	ResetIsEqualKnob();
 	DBG(printf("[DGEMV_FT3]Releasing memory for vec_bak's\n"));
 	SUPERSETJMP("Just before free");
@@ -1274,7 +1287,8 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	MY_REMOVE_SIGSEGV_HANDLER();
 
 	// Last, print out the summary
-	LOGCALL(printf("gsl_blas_dgemv A=%lux%lu X=%lux1 Y=%lux1 sigsegv_comp=%d algo_retry=%d\n",
+	LOGCALL(printf("gsl_blas_dgemv %d,%g,%g, A=%lux%lu X=%lux1 Y=%lux1 sigsegv_comp=%d algo_retry=%d\n",
+		Trans, alpha, beta,
 		matA->size1, matA->size2, vecX->size, vecY->size, info.n_sigsegv_comp, info.n_algo_retry));
 }
 
@@ -1325,6 +1339,7 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	AdjustIsEqualKnob(3);
 	if(jmpret!=0) {
 		kk: 
+		my_stopwatch_checkpoint(6);
 		DBG(printf("[DSYRK_FT3]Recovering matrices from error correction data (jmpret=%d)\n", jmpret));
 		size_t *mas1 = &(((gsl_matrix*)A)->size1);
 		size_t *mas2 = &(((gsl_matrix*)A)->size2);
@@ -1342,6 +1357,7 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		TRI_RECOVER(emc0, emc1, emc2);
 		MY_MAT_CHK_RECOVER_POECC(sumC, (void*)emc0, (gsl_matrix*)matCbk0);
 		gsl_matrix_memcpy(C, C_bak); 
+		my_stopwatch_stop(6);
 	}
 	DBG(printf("[DSYRK_FT3]Normal call to dsyrk.. nonEqualCount=%d\n", nonEqualCount));
 	my_stopwatch_checkpoint(3); 
@@ -1357,7 +1373,6 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	my_stopwatch_stop(11);
 	if(isEqual==1) { DBG(printf("[DSYRK_FT3]Result: Equal\n")); }
 	else {
-		my_stopwatch_checkpoint(6); 
 		DBG(printf("[DSYRK_FT3]Result: NOT Equal\n"));
 		nonEqualCount = nonEqualCount + 1;
 		num_total_retries += 1;
@@ -1370,7 +1385,6 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 		}
 	}
 	ResetIsEqualKnob();
-	my_stopwatch_stop(6); 
 	DBG(printf("[DSYRK_FT3]Releasing memory for C_bak\n"));
 	SUPERSETJMP("Just before free");
 	if(jmpret == 0) {
@@ -1392,7 +1406,8 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	MY_REMOVE_SIGSEGV_HANDLER();
 
 	// Last, print out summary.
-	LOGCALL(printf("gsl_blas_dsyrk A=%lux%lu C=%lux%lu n_sigsegv_comp=%d n_algo_retry=%d\n",
+	LOGCALL(printf("gsl_blas_dsyrk %d,%d,%g,%g, A=%lux%lu C=%lux%lu n_sigsegv_comp=%d n_algo_retry=%d\n",
+		uplo, trans, alpha, beta,
 		A->size1, A->size2, C->size1, C->size2, info.n_sigsegv_comp, info.n_algo_retry));
 }
 
@@ -1449,6 +1464,7 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 	SUPERSETJMP("After encoding");
 	if(jmpret != 0) {
 		kk: 
+		my_stopwatch_checkpoint(6);
 		DBG(printf("[DTRSV_FT]Recovering matrix and vector from file\n"));
 		{ // Recover input data A
 			TRI_RECOVER(matA_0, matA_1, matA_2);
@@ -1478,6 +1494,7 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 			TRI_RECOVER_SIZE_T((*vxst), vxst0, vxst1, vxst2);
 			gsl_vector_memcpy(X, X_bak);
 		}
+		my_stopwatch_stop(6);
 	}
 	DBG(printf("[DTRSV_FT]Normal call to dtrsv.. nonEqualCount=%d\n", nonEqualCount));
 	SW3START; 
@@ -1492,7 +1509,6 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 	else isEqual = Is_GSL_DTRSV_Equal(uplo, TransA, Diag, A, X_bak, X);
 	if(isEqual==1) { DBG(printf("[DTRSV_FT]Result: Equal\n")); }
 	else {
-		my_stopwatch_checkpoint(6); 
 		DBG(printf("[DTRSV_FT]Result: NOT Equal\n"));
 		num_total_retries += 1;
 		num_retries_sv += 1;
@@ -1503,7 +1519,6 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 			goto kk; 
 		}
 	}
-	my_stopwatch_stop(6); 
 	DBG(printf("[DTRSV_FT]Releasing memory for X_bak\n"));
 	SUPERSETJMP("Just before freeing memory");
 	if(jmpret == 0) {
@@ -1523,7 +1538,8 @@ void GSL_BLAS_DTRSV_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t TransA,
 	MY_REMOVE_SIGSEGV_HANDLER();
 
 	// Last: print out summary
-	LOGCALL(printf("gsl_blas_dtrsv A=%lux%lu X=%lux1 n_sigsegv_comp=%d n_algo_retry=%d\n",
+	LOGCALL(printf("gsl_blas_dtrsv %d,%d,%d, A=%lux%lu X=%lux1 n_sigsegv_comp=%d n_algo_retry=%d\n",
+		uplo, TransA, Diag,
 		A->size1, A->size2, X->size, info.n_sigsegv_comp, info.n_algo_retry));
 }
 
@@ -1575,7 +1591,7 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 	SUPERSETJMP("[GSL_LINALG_CHOLESKY_DECOMP_FT3] After encoding\n");
 	if(jmpret != 0) {
 		kk: 
-		
+		my_stopwatch_checkpoint(6);
 		{
 			// Recover A's fields and A_bak's fields
 			size_t *mas1 = &(((gsl_matrix*)A)->size1);
@@ -1609,6 +1625,7 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 			if((unsigned long)A != matA0) A = (gsl_matrix*)matA0;
 			gsl_matrix_memcpy(A, A_bak);
 		}
+		my_stopwatch_stop(6);
 	}
 	DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] normal call to cholesky_decomp. nonEqualCount=%d\n", nonEqualCount)); 
 	SW3START; 
@@ -1623,7 +1640,6 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 	else isEqual = Is_GSL_linalg_cholesky_decomp_Equal(A_bak, A); 
 	if(isEqual==1) { DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Result: Equal\n"));} 
 	else {
-		my_stopwatch_checkpoint(6); 
 		DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Result: NOT Equal\n")); 
 		nonEqualCount = nonEqualCount+1; 
 		num_total_retries += 1;
@@ -1636,7 +1652,6 @@ void GSL_LINALG_CHOLESKY_DECOMP_FT3(gsl_matrix* A)
 		} 
 	} 
 	ResetIsEqualKnob();
-	my_stopwatch_stop(6);
 	DBG(printf("[GSL_LINALG_CHOLESKY_DECOMP_FT3] Releasing memory\n"));
 	SUPERSETJMP("Just before free");
 	if(jmpret == 0)
