@@ -68,3 +68,4 @@ re_pass4 = r">> Pass 4 recalculation: (?P<pass4_recalc>[0-9]+).*";
 re_stopwatch = r"\[PID=(?P<pid>[0-9]+)\]\[my_stopwatch_show #(?P<sw_id>[0-9]+)\] (?P<microsec>[0-9]+) microseconds \((?P<desc>.*)\)\.";
 re_num_retries = "\[FT3\] # of retries - (?P<routine>.*): (?P<retries>[0-9]+).*"
 re_ft3test_rmsd = "\[FT3Test (?P<routine>.*)\].*RMSD=(?P<rmsd>.*)"
+re_routineinfo = ">>>---\[PID=(?P<pid>[0-9]+)\](?P<routine>[\S]*)\ (?P<dims>(.*=[0-9]+x[0-9]+\ )+)sigsegv_comp=(?P<sigsegv>[0-9]+).*algo_retry=(?P<algoretry>[0-9]+).*"

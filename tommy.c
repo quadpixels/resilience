@@ -1222,7 +1222,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 					TRI_RECOVER(vybkd0,vybkd1,vybkd2);
 					if(vecY_bak->data != (double*)vybkd0) vecY_bak->data=(double*)vybkd0;
 					TRI_RECOVER(evy0, evy1, evy2);                 // the same dims
-					MY_VEC_CHK_RECOVER_POECC(sumY, (void*)evy0, (gsl_vector*)vecYbak0);
+					MY_VEC_CHK_RECOVER_POECC(sumY, (void*)evy0, vecY_bak);
 				
 					TRI_RECOVER(vecY0, vecY1, vecY2);
 					if((unsigned long)vecY != vecY0) vecY = (gsl_vector*)vecY0;
