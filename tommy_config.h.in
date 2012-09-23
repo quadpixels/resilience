@@ -1,0 +1,57 @@
+// Configuration header file for soft error analysis //
+
+// 0. Enable Application Fault Injection ?
+//##@@!! Vulnerability selection goes here
+// define APP_VULN if injecting errors into the app.
+#ifdef APP_VULN
+	#ifndef FT3TEST
+	#define APPV_REAL_TRY(label) REAL_TRY(label)
+	#define APPV_REAL_CATCH(label) REAL_CATCH(label)
+	#define APPV_REAL_END(label) REAL_END(label)
+	#else
+		#define APPV_REAL_TRY(label) ;
+		#define APPV_REAL_CATCH(label) ;
+		#define APPV_REAL_END(label) ;
+	#endif
+#else
+	#define APPV_REAL_TRY(label) ;
+	#define APPV_REAL_CATCH(label) ;
+	#define APPV_REAL_END(label) ;
+#endif
+
+
+// 1. Enable debug verbose output?
+//#define DEBUG
+#ifdef DEBUG
+#define DBG(call) { call; }
+#else   
+#define DBG(call) {}
+#endif
+
+// 1.5 Log all calls to (FT) GSL routines ?
+//#define LOGCALLS
+#ifdef LOGCALLS
+#define LOGCALL(call) { printf(">>>---[PID=%d]", getpid()); call; }
+#else
+#define LOGCALL(call) {}
+#endif
+
+// 2. Number of maximum consecutive re-calculations
+#define NUM_OF_RERUN 35	// Up to how many re-runs ? If the number is exceeded the program would return the last result
+
+// 3. Number of maximum segmentation faults to handle
+#define NUM_OF_SIGSEGV 1500 // Up to how many SIGSEGV's ? If the number is exceeded the program would be aborted.
+
+// 4. Algorithmic fault checker error detection threshold
+#ifdef DTRSV_EXPERIMENT
+#define FT_TOLERANCE 0.01
+#else
+#define FT_TOLERANCE       0.0001
+#endif
+//##@@!! Algorithmic checker tolerance goes here
+
+// 5. Disable profiling stopwatches?
+//#define PROFILE_DISABLED
+
+// 6. Enable input checksum for MV ?
+//#define ENABLE_POECC_MV

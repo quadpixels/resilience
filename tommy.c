@@ -1163,10 +1163,11 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	TRIPLICATE(vecY_bak->data, vybkd0, vybkd1, vybkd2);
 	
 	#ifdef ENABLE_POECC_MV
-	if(1) {
+	if(1)
 	#else
-	if(0) {
+	if(0) 
 	#endif
+	{
 		encode((matA->data), (matA->size1*matA->size2), &ecMatA); 
 		encode((vecX->data), (vecX->size), &ecVecX); 
 		encode((vecY->data), (vecY->size), &ecVecY); 
@@ -1267,20 +1268,27 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 	SUPERSETJMP("Just before free");
 	if(jmpret == 0) {
 		gsl_vector_free(vecY_bak);
+		#ifdef ENABLE_POECC_MV
+		if(1)
+		#else
+		if(0)
+		#endif
 		{
-			TRI_RECOVER(ema0, ema1, ema2);
-			if((unsigned long)ecMatA != ema0) ecMatA = (void*)ema0;
-			free(ecMatA);
-		}
-		{
-			TRI_RECOVER(evx0, evx1, evx2);
-			if((unsigned long)ecVecX != evx0) ecVecX = (void*)evx0;
-			free(ecVecX);
-		}
-		{
-			TRI_RECOVER(evy0, evy1, evy2);
-			if((unsigned long)ecVecY != evy0) ecVecY = (void*)evy0;
-			free(ecVecY);
+			{
+				TRI_RECOVER(ema0, ema1, ema2);
+				if((unsigned long)ecMatA != ema0) ecMatA = (void*)ema0;
+				free(ecMatA);
+			}
+			{
+				TRI_RECOVER(evx0, evx1, evx2);
+				if((unsigned long)ecVecX != evx0) ecVecX = (void*)evx0;
+				free(ecVecX);
+			}
+			{
+				TRI_RECOVER(evy0, evy1, evy2);
+				if((unsigned long)ecVecY != evy0) ecVecY = (void*)evy0;
+				free(ecVecY);
+			}
 		}
 		DBG(printf("Released.\n"));
 	} else {
