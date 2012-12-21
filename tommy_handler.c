@@ -57,16 +57,19 @@ void my_action(int sig) {
 	my_stopwatch_checkpoint(5);
 	_count = _count + 1;
 	printf(" >> Caught SIGSEGV signal (%d out of %d allowed)\n", _count, NUM_OF_SIGSEGV);
-	time_t rawtime; struct tm *timeinfo; time(&rawtime); timeinfo = localtime(&rawtime);
-	printf("    Time: %s", asctime(timeinfo)); // Structure tm is statically allocated.
+	// 2012-12-17: In ODE test, maybe the stack environment has been corrupted.
+//	time_t rawtime; struct tm *timeinfo; time(&rawtime); timeinfo = localtime(&rawtime);
+//	printf("    Time: %s", asctime(timeinfo)); // Structure tm is statically allocated.
 	
 	/* Backtrace stuff */
 	void* array[10];
 	char** strings;
 	size_t size;
 	size = backtrace(array, 10);
-	printf(" >> Stack contents (level=%ld):\n", size);
-	backtrace_symbols_fd(array, size, 2);
+	if(_count > 1) {
+		printf(" >> Stack contents (level=%ld):\n", size);
+		backtrace_symbols_fd(array, size, 2);
+	}
 #ifdef UNWIND
 	printf(" >> Stack contents by libunwind\n");
 	do_backtrace();

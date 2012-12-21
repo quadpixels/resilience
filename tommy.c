@@ -54,6 +54,10 @@ extern int num_total_retries, num_retries_mm, num_retries_mv, num_retries_rk,
 double is_equal_knob = FT_TOLERANCE;
 void check_nan(double x, char* k) { if(/*isnan(x)*/x!=x) { printf("%s is nan\n", k); }}
 
+// Oct 5
+// Here be variables for partial rollback
+gsl_matrix* g_C_bak_mm;
+
 noinline
 double my_sum_vector_actual(const gsl_vector* v) {
 	double ret = 0;
@@ -962,6 +966,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 	nonEqualCount=0;
 	MY_SET_SIGSEGV_HANDLER();
 	gsl_matrix* matC_bak = gsl_matrix_alloc(matC->size1, matC->size2);
+	g_C_bak_mm = matC_bak;
 	/* Protect matC_bak -> data */
 	unsigned long mCbd_0, mCbd_1, mCbd_2;
 	TRIPLICATE(matC_bak, matC_0, matC_1, matC_2);
@@ -1063,6 +1068,7 @@ void GSL_BLAS_DGEMM_FT3(CBLAS_TRANSPOSE_t TransA, CBLAS_TRANSPOSE_t TransB,
 		}
 	}
 	ResetIsEqualKnob();
+	g_C_bak_mm = NULL;
 	printf("[DGEMM_FT3]Releasing memory for mat_bak's and deleting temp files\n");
 	SUPERSETJMP("Just before free");
 	if(jmpret == 0) {
