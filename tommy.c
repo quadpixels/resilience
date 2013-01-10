@@ -9,6 +9,8 @@
 #include <sys/types.h>
 #include <unistd.h> // For GetPID()
 
+int mv_count;
+
 #define FT_ROUTINES_VULN
 #ifdef FT_ROUTINES_VULN
 	#ifndef FT3TEST
@@ -27,8 +29,8 @@
 	#define FTV_REAL_END(label) ;
 #endif
 
-// Added on Sep 06
-#define FT_CHKR
+// Added on Sep 06 Removed on Jan 10
+//#define FT_CHKR 
 #ifdef FT_CHKR
 	#define PROTECT_IDX_I  \
 	((i!=i1-1) && (i1-1==i2-2) && (i=i1-1)), \
@@ -758,6 +760,7 @@ int Is_GSL_linalg_cholesky_decomp_Equal_actual(const gsl_matrix* A, const gsl_ma
 	int ret = 1;
 	my_stopwatch_checkpoint(4);
 FTV_REAL_TRY(0) {
+/*
 	for(i=0; i<n; i++) {
 		for(j=0; j<=i; j++) {
 			double tmp = 0;
@@ -774,6 +777,48 @@ FTV_REAL_TRY(0) {
 		}
 	}
 	re:
+	*/
+	gsl_vector* v1 = gsl_vector_alloc(n);
+	gsl_vector* v2 = gsl_vector_alloc(n);
+	gsl_vector* v2Lt = gsl_vector_alloc(n);
+	int i,j,k; for(i=0; i<n; i++) {
+		double tmp = (double)rand();
+		gsl_vector_set(v1, i, tmp);
+		gsl_vector_set(v2, i, tmp);
+	}
+	// Compute Lt * v2  ------- stored in v2Lt
+	for(i=0; i<n; i++) {
+		double tmp = 0; const int tda = A_out->tda;
+		for(j=i; j<n; j++) {
+			tmp += A_out->data[tda*i + j] * v2->data[j];
+		}
+		gsl_vector_set(v2Lt, i, tmp);
+	}
+	// Compute L * (Lt * v2) ------- stored in v2
+	for(i=0; i<n; i++) {
+		double tmp = 0; const int tda = A_out->tda;
+		for(j=0; j<=i; j++) {
+			tmp += A_out->data[tda*i + j] * v2Lt->data[j];
+		}
+		gsl_vector_set(v2, i, tmp);
+	}
+
+	// Compute A*v1 ------- No need to store, compare on the fly
+	for(i=0; i<n; i++) {
+		double tmp = 0; const int tda = A_out->tda;
+		for(j=i; j<n; j++) {
+			tmp += A_out->data[tda*i + j] * v1->data[j];
+		}
+		double tmp0 = gsl_vector_get(v2Lt, i);
+		if(tmp == tmp0) continue;
+		else {
+			tmp -= tmp0; double r = tmp/tmp0; if(r<0) r=r*-1.0;
+			if(r>FT_TOLERANCE) { ret = 0; break; }
+		}
+	}
+
+	// Compare v1A and v2
+
 	if(ret==0) printf("## Cholesky_Decomp not equal\n");
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);
 	my_stopwatch_stop(4);
@@ -1123,6 +1168,7 @@ void GSL_BLAS_DGEMV_FT3(CBLAS_TRANSPOSE_t Trans, double alpha,
 			double beta, gsl_vector* vecY)
 {
 	RoutineInfo info; EmptyRoutineInfo(&info); 
+	mv_count += 1;
 
 	/* Protect pointers to matrix A, vectors X and (the original) Y */
 	unsigned long matA0, matA1, matA2,

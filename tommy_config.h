@@ -1,7 +1,7 @@
 // Configuration header file for soft error analysis //
 
 // 0. Enable Application Fault Injection ?
-//#define APP_VULN
+#define APP_VULN
 #ifdef APP_VULN
 	#ifndef FT3TEST
 	#define APPV_REAL_TRY(label) REAL_TRY(label)
@@ -53,3 +53,7 @@
 
 // 6. Enable input checksum for MV ?
 //#define ENABLE_POECC_MV
+
+// 7. Enable our checker for integrator?
+#define INTEGRATOR_THRESH
+#define INTEGRATOR_FACTOR 5
