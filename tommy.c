@@ -8,6 +8,7 @@
 #include "real.h"
 #include <sys/types.h>
 #include <unistd.h> // For GetPID()
+#include <assert.h>
 
 int mv_count;
 
@@ -619,6 +620,7 @@ int Is_GSL_DSYRK_Equal2_actual(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	return ret;
 }
 
+// Todo: Caching the column sums
 /* Check if Y2 = A * X */
 noinline 
 int Is_GSL_DGEMV_Equal_actual(CBLAS_TRANSPOSE_t Trans, double alpha, const gsl_matrix* A, const gsl_vector* X, double beta, const gsl_vector* Y, const gsl_vector* Y2) {
@@ -648,20 +650,11 @@ FTV_REAL_TRY(0) {
 		
 		sum1 = sum1 * beta;
 	}
-	#ifndef FT_CHKR
+/*	
 	for(i=0; i<X->size; i++) {
-	#else
-	for(i=0, i1=1, i2=2; i<X->size; i++, i1++, i2++,
-		PROTECT_IDX_I) {
-	#endif
-		double currCS = 0; /* current column Sum */
+		double currCS = 0; // current column Sum
 		int jj = (Trans==CblasNoTrans) ? A->size1 : A->size2;
-		#ifndef FT_CHKR
 		for(j=0; j<jj; j++) {
-		#else
-		for(j=0, j1=1, j2=2; j<jj; j++, j1++, j2++,
-			PROTECT_IDX_J) {
-		#endif
 			if(Trans==CblasNoTrans) { 
 				currCS = currCS + A->data[j*A->tda+i];
 				//gsl_matrix_get(A, j, i);
@@ -671,7 +664,27 @@ FTV_REAL_TRY(0) {
 			}
 		}
 		sum1_1 = sum1_1 + currCS * X->data[i];//gsl_vector_get(X, i);
+	} */ // Old code is slow; doesn't take care of cache friendliness
+	int jj = (Trans==CblasNoTrans) ? A->size1 : A->size2;
+	if(Trans==CblasNoTrans) {
+		double* colsums = (double*)malloc(sizeof(double) * X->size);
+		for(j=0; j<jj; j++) {
+			for(i=0; i<X->size; i++) {
+				colsums[i] += A->data[j*A->tda+i];
+			}
+		}
+		for(i=0; i<X->size; i++) sum1_1 += colsums[i] * X->data[i];
+		free(colsums);
+	} else {
+		for(i=0; i<X->size; i++) {
+			double currCS = 0;
+			for(j=0; j<jj; j++) {
+				currCS += A->data[i*A->tda + j];
+			}
+			sum1_1 += currCS*X->data[i];
+		}
 	}
+
 	sum1_1 *= alpha;
 	sum1 += sum1_1;
 	#ifndef FT_CHKR
@@ -706,6 +719,89 @@ int Is_GSL_DSYRK_Equal2(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	SUPERSETJMP("Is_GSL_DSYRK_Equal2");
 	trick_me_jr(jmpret);
 	return Is_GSL_DSYRK_Equal2_actual(uplo, trans, alpha, A, beta, C, C2);
+}
+
+void my_uplomv(const CBLAS_UPLO_t uplo, double beta, const gsl_matrix* C,
+	const gsl_vector* vin, gsl_vector* vout) {
+	assert(C->size1 == C->size2);
+	assert(C->size1 == vin->size);
+	assert(C->size1 == vout->size);
+	const int n = C->size1;
+	int i, j;
+	if(uplo == CblasUpper) {
+		for(i=0; i<n; i++) {
+			double tmp = 0;
+			for(j=0; j<i; j++) {
+				// The lower triangle is the mirror of the upper, so A[i,j] == A[j,i]
+				tmp += gsl_vector_get(vin, j)*(C->data[C->tda*j + i]);
+			}
+			for(j=i; j<n; j++) {
+				// The upper triangle: unchanged
+				tmp += gsl_vector_get(vin, j)*(C->data[C->tda*i + j]);
+			}
+			tmp = tmp * beta;
+			gsl_vector_set(vout, i, tmp);
+		}
+	} else if(uplo == CblasLower) {
+		for(i=0; i<n; i++) {
+			double tmp = 0;
+			for(j=0; j<i; j++) {
+				// The lower triangle is unchanged.
+				tmp += gsl_vector_get(vin, j)*(C->data[C->tda*i + j]);
+			}
+			for(j=i; j<n; j++) {
+				// The upper triangle is the mirror of the lower, so A[i,j] == A[j,i]
+				tmp += gsl_vector_get(vin, j)*(C->data[C->tda*j + i]);
+			}
+			tmp = tmp * beta;
+			gsl_vector_set(vout, i, tmp);
+		}
+	}
+}
+
+int Is_GSL_DSYRK_Equal3_actual(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
+		double alpha, const gsl_matrix* A, double beta, const gsl_matrix* C,
+		const gsl_matrix* C2) {
+	my_stopwatch_checkpoint(4);
+	if(C2->size1 != C2->size2) { DBG(printf("[Is_GSL_DSYRK_Equal2] C2 is not square. \n")); return 0; }
+	const int n = C2->size1;
+	gsl_vector* AAtv = gsl_vector_alloc(n);
+	gsl_vector* tmpv = gsl_vector_alloc(n);
+	gsl_vector* Cv   = gsl_vector_alloc(n);
+	gsl_vector* C2v  = gsl_vector_alloc(n);
+	int i, j;
+	for(i=0; i<n; i++) {
+		double tmp = rand()*1.0/RAND_MAX;
+		AAtv->data[i] = Cv->data[i] = C2v->data[i] = tmp;
+	}
+
+	// Right hand side: A * At * v
+	CBLAS_TRANSPOSE_t trans_trans = (trans == CblasTrans) ? CblasNoTrans:CblasTrans;
+	my_dgemv(trans_trans, alpha, A, AAtv, 0.0, tmpv);
+	my_dgemv(trans,       1.0,   A, tmpv, 0.0, AAtv);
+
+	my_uplomv(uplo, beta, C, Cv, tmpv);
+
+	// Cv <- AAtv + Cv
+	for(i=0; i<n; i++) Cv->data[i]=tmpv->data[i] + AAtv->data[i];
+
+	// Left hand side: C2 * v
+	my_uplomv(uplo, 1.0, C2, C2v, tmpv);
+	int result = Is_GSL_Vector_Equal(tmpv, Cv);
+	if(result==0) { printf("## DSYRK not equal (chkr3)\n"); }
+	my_stopwatch_stop(4);
+	return result;
+}
+
+noinline
+int Is_GSL_DSYRK_Equal3(const CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
+					double alpha, const gsl_matrix* A,
+					double beta, const gsl_matrix* C, const gsl_matrix* C2)
+{
+	int jmpret;
+	SUPERSETJMP("Is_GSL_DSYRK_Equal3");
+	trick_me_jr(jmpret);
+	return Is_GSL_DSYRK_Equal3_actual(uplo, trans, alpha, A, beta, C, C2);
 }
 
 noinline
@@ -1431,7 +1527,7 @@ void GSL_BLAS_DSYRK_FT3(CBLAS_UPLO_t uplo, CBLAS_TRANSPOSE_t trans,
 	gsl_blas_dsyrk(uplo, trans, alpha, A, beta, C);
 	my_stopwatch_stop(3);
 	my_stopwatch_checkpoint(11); // Time spent in checks
-	isEqual = Is_GSL_DSYRK_Equal2(uplo, trans, alpha, A, beta, C_bak, C); // May use Equal or Equal2
+	isEqual = Is_GSL_DSYRK_Equal3(uplo, trans, alpha, A, beta, C_bak, C); // May use Equal or Equal2
 	my_stopwatch_stop(11);
 	if(isEqual==1) { DBG(printf("[DSYRK_FT3]Result: Equal\n")); }
 	else {

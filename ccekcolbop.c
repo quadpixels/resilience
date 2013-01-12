@@ -170,9 +170,7 @@ unsigned int failed_corr = 0;
 	int jmpret = 0;
 	SUPERSETJMP("Block ECC decode()");
 	
-	#ifdef TOMMY_H
 	my_stopwatch_checkpoint(8);
-	#endif
 
 FTV_REAL_TRY(0) {
 	/* Perhaps protecting patient and doctor also? */
@@ -201,9 +199,7 @@ FTV_REAL_TRY(0) {
 		print_array(doc, "Doctor", lenPatient);
 	}
 #endif
-	#ifdef TOMMY_H
 	my_stopwatch_stop(8);
-	#endif
 
 	return failed_corr;
 }
@@ -216,9 +212,7 @@ unsigned int encode(const double* array, const int len, void** backup) {
 	DBG(printf("[encode] array=%lx len=%d backup=%lx\n", (unsigned long)array, len, (unsigned long)backup));
 
 	/* Profiling */
-	#ifdef TOMMY_H
 	my_stopwatch_checkpoint(8);
-	#endif
 	
 	/* 1. Some preparations. */
 	const int nTiles = ((len-1) / BLKSIZE) + 1;
@@ -284,9 +278,7 @@ FTV_REAL_TRY(0) {
 #endif
 
 	*backup = ret;
-	#ifdef TOMMY_H
 	my_stopwatch_stop(8);
-	#endif
 	return retSize;
 
 } FTV_REAL_CATCH(0) {} FTV_REAL_END(0);

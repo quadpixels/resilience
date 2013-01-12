@@ -69,6 +69,7 @@ void my_action(int sig);
 /* The super sigsetjmp! */
 // To use this macro, you must declare a variable called 'int jmpret'.
 #define SUPERSETJMP(message) \
+	my_stopwatch_checkpoint(5); \
 	jmpret = sigsetjmp(buf, 1);  \
 	trick_me_jr(jmpret); \
 	if(jmpret == 0) { \
@@ -77,6 +78,7 @@ void my_action(int sig);
 	} else { \
 		printf("[SUPERSETJMP] returned from %s (sum=%d)\n", message, GetJmpBufChecksum(&buf)); \
 	}\
+	my_stopwatch_stop(5);
 
 /* To enable libunwind for the handler */
 
